@@ -1,27 +1,27 @@
 from flask import Flask, jsonify
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_bcrypt import Bcrypt
 
-db = SQLAlchemy()
-migrate = Migrate()
-bcrypt = Bcrypt()
+from models import db, bcrypt
+import os
 
+app = Flask(__name__)
 
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object("config")
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-    db.init_app(app)
-    migrate.init_app(app, db)
-    bcrypt.init_app(app)
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(BASE_DIR, "app.db")
+app.config["SQLALCHEMY_TRACKING_MODIFICATIONS"] = False
+app.config["SECRET_KEY"] = "dev-secret-key"
 
-    # Simple health-check route
-    @app.route("/")
-    def index():
-        return jsonify({"message": "API is running"})
-
-    return app
+# Initialize extensions
+db.init_app(app)
+bcrypt.init_app(app)
+migrate = Migrate(app, db)
 
 
-app = create_app()
+@app.route("/")
+def index():
+    return jsonify({"message": "API is running"}), 200
+
+
+if __name__ == "__main__":
+    app.run(port=5555, debug=True)
