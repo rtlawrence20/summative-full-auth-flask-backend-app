@@ -183,5 +183,122 @@ def logout():
     return "", 204
 
 
+# ---------- Notes CRUD Routes ---------- #
+
+
+@app.get("/notes")
+@login_required
+def get_notes(current_user):
+    """
+    List ALL notes for the current user.
+    TODO: Pagination
+
+    Response:
+      200 OK + [ {note}, {note}, ... ]
+    """
+    notes = (
+        Note.query.filter_by(user_id=current_user.id)
+        .order_by(Note.created_at.desc())
+        .all()
+    )
+
+    return jsonify([note.to_dict() for note in notes]), 200
+
+
+@app.post("/notes")
+@login_required
+def create_note(current_user):
+    """
+    Create a new note belonging to the current user.
+
+    Expected JSON:
+    {
+      "title": "string",
+      "content": "string"
+    }
+
+    Responses:
+      201 Created + note JSON on success
+      400 Bad Request + {"errors": [...]} on validation error
+    """
+    data = request.get_json() or {}
+
+    title = (data.get("title") or "").strip()
+    content = (data.get("content") or "").strip()
+
+    errors = []
+    if not title:
+        errors.append("Title is required.")
+    if not content:
+        errors.append("Content is required.")
+
+    if errors:
+        return jsonify({"errors": errors}), 400
+
+    note = Note(
+        title=title,
+        content=content,
+        user_id=current_user.id,
+    )
+
+    db.session.add(note)
+    db.session.commit()
+
+    return jsonify(note.to_dict()), 201
+
+
+@app.patch("/notes/<int:note_id>")
+@login_required
+def update_note(note_id, current_user):
+    """
+    Update an existing note belonging to the current user.
+
+    Expected JSON (any subset):
+    {
+      "title": "new title",
+      "content": "new content"
+    }
+
+    Responses:
+      200 OK + note JSON on success
+      404 Not Found + {"error": "Note not found"} if note doesn't exist or belongs to another user
+    """
+    note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
+    if not note:
+        return jsonify({"error": "Note not found"}), 404
+
+    data = request.get_json() or {}
+
+    if "title" in data and data["title"] is not None:
+        note.title = data["title"].strip()
+
+    if "content" in data and data["content"] is not None:
+        note.content = data["content"].strip()
+
+    db.session.commit()
+
+    return jsonify(note.to_dict()), 200
+
+
+@app.delete("/notes/<int:note_id>")
+@login_required
+def delete_note(note_id, current_user):
+    """
+    Delete an existing note belonging to the current user.
+
+    Responses:
+      204 No Content on success
+      404 Not Found + {"error": "Note not found"} if note doesn't exist or belongs to another user
+    """
+    note = Note.query.filter_by(id=note_id, user_id=current_user.id).first()
+    if not note:
+        return jsonify({"error": "Note not found"}), 404
+
+    db.session.delete(note)
+    db.session.commit()
+
+    return "", 204
+
+
 if __name__ == "__main__":
     app.run(port=5555, debug=True)
