@@ -3,3 +3,12 @@
 
 # VS Code settings
 .vscode/
+
+# Ignore SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Ignore PyCache
+__pycache__/
+*.pyc
