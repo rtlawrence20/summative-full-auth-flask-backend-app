@@ -334,5 +334,37 @@ def delete_note(note_id, current_user):
     return "", 204
 
 
+# ---------- Global Error Handlers ---------- #
+
+
+@app.errorhandler(404)
+def handle_404(err):
+    """
+    Return a JSON 404 instead of the default HTML page.
+    Triggered when:
+      - a route doesn't exist
+      - or explicitly abort(404)
+    """
+    return jsonify({"error": "Not found"}), 404
+
+
+@app.errorhandler(400)
+def handle_400(err):
+    """
+    Catch-all for bad requests.
+    Per-route validation can still return 400s explicitly.
+    """
+    return jsonify({"error": "Bad request"}), 400
+
+
+@app.errorhandler(500)
+def handle_500(err):
+    """
+    Generic 500 handler so unexpected errors are still JSON.
+    500 errors indicate a bug in the server code.
+    """
+    return jsonify({"error": "Internal server error"}), 500
+
+
 if __name__ == "__main__":
     app.run(port=5555, debug=True)
