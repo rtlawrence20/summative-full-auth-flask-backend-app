@@ -190,19 +190,53 @@ def logout():
 @login_required
 def get_notes(current_user):
     """
-    List ALL notes for the current user.
-    TODO: Pagination
+    List notes for the current user with pagination.
+
+    Query params:
+      ?page=<int> (default: 1)
+      ?per_page=<int> (default: 10, max: 50)
 
     Response:
-      200 OK + [ {note}, {note}, ... ]
+      200 OK + {
+        "items": [ {note}, ... ],
+        "page": 1,
+        "per_page": 10,
+        "total": 25,
+        "pages": 3
+      }
     """
-    notes = (
-        Note.query.filter_by(user_id=current_user.id)
-        .order_by(Note.created_at.desc())
-        .all()
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+
+    # Enforce max per_page
+    if per_page > 50:
+        per_page = 50
+
+    query = Note.query.filter_by(user_id=current_user.id).order_by(
+        Note.created_at.desc()
     )
 
-    return jsonify([note.to_dict() for note in notes]), 200
+    pagination = db.paginate(
+        query,
+        page=page,
+        per_page=per_page,
+        error_out=False,
+    )
+
+    items = [note.to_dict() for note in pagination.items]
+
+    return (
+        jsonify(
+            {
+                "items": items,
+                "page": pagination.page,
+                "per_page": pagination.per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+            }
+        ),
+        200,
+    )
 
 
 @app.post("/notes")
